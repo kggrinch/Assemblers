@@ -208,6 +208,8 @@ Reset_Handler   PROC
 				IMPORT  __main
 	
 			; Store __initial_sp into MSP (Step 1 toward Midpoint Report)
+				LDR		R0, =__initial_sp 	; save intial stack to temp register | A
+				MSR 	MSP, R0 			; load intial stack from temp register to MSP special register | A
 
 				ISB     ; Let's leave as is from the original.
                 LDR     R0, =SystemInit
@@ -218,7 +220,12 @@ Reset_Handler   PROC
 			; Initialize the SysTick timer (Step 2)
 			
 			; Store __initial_user_sp into PSP (Step 1 toward Midpoint Report)
-			; Change CPU mode into unprivileged thread mode using PSP
+				LDR		R0, =__initial_user_sp 	; save intial user stack to temp register
+				MSR 	PSP, R0					; load intial user stack from temp register to special PSP register | A
+			; Change CPU mode into unprivileged thread mode using PSP | A
+				MOV		R0, #0x2				; Move into temp register to activiate unprivliged bits | A
+				MSR		CONTROL, R0				; load into control register to activiate unprivilaged  thread mode | A
+				
 
                 LDR     R0, =__main
                 BX      R0

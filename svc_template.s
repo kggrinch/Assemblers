@@ -11,6 +11,12 @@ SYS_MEMCPY		EQU		0x3		; address 20007B0C
 SYS_MALLOC		EQU		0x4		; address 20007B10
 SYS_FREE		EQU		0x5		; address 20007B14
 
+; Importing the addresses of the routines. Instruction from Final_project_pdf page 5
+;IMPORT _kfree 
+;IMPORT _kalloc 
+;IMPORT _signal_handler 
+;IMPORT _timer_start 
+	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; System Call Table Initialization
 		EXPORT	_syscall_table_init
