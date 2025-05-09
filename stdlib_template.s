@@ -2,7 +2,7 @@
 		THUMB
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; void _bzero( void *s, int n )
+; void _bzero( void *s, int n ) : Given a start address it zeros out the n bytes from the start address
 ; Parameters
 ;	s 		- pointer to the memory location to zero-initialize
 ;	n		- a number of bytes to zero-initialize
@@ -11,6 +11,26 @@
 		EXPORT	_bzero
 _bzero
 		; implement your complete logic, including stack operations
+		;Push	PSP! {LR}	; Push return register into stack | Might not need if not moving to other locations
+		;R0 = s
+		;R1 = n
+		
+		MOV			R2, #0		; Counter
+		MOV			R3, #0
+		
+		; Save the start address 
+		; Use a loop and store 0s in the memory location at the start address storing 1 byte at a time
+		; After each store of a byte incrementd the loop until we have stored up to n bytes
+_bzero_loop
+		
+		CMP		R2, R1			; Check if r2 >= n break
+		BGE		_exit
+		STRB	R3, [R0], #1	; Clear 1 byte at memory and increment memory location to next memory
+		ADDS	R2, R2, #1	; increment counter
+		B		_bzero_loop
+		
+_exit		
+		
 		MOV		pc, lr	
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
