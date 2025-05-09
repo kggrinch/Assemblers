@@ -223,10 +223,11 @@ Reset_Handler   PROC
 				LDR		R0, =__initial_user_sp 	; save intial user stack to temp register
 				MSR 	PSP, R0					; load intial user stack from temp register to special PSP register | A
 			; Change CPU mode into unprivileged thread mode using PSP | A
-				MOV		R0, #0x2				; Move into temp register to activiate unprivliged bits | A
+				MOV		R0, #0x3				; Move into temp register to activiate unprivliged bits | A
+				MRS		R1, CONTROL
+				ORR		R0, R0, R1
 				MSR		CONTROL, R0				; load into control register to activiate unprivilaged  thread mode | A
 				
-
                 LDR     R0, =__main
                 BX      R0
                 ENDP
