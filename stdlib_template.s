@@ -23,8 +23,51 @@ _bzero
 ;   dest
 		EXPORT	_strncpy
 _strncpy
-		; implement your complete logic, including stack operations
-		MOV		pc, lr
+		; implement your complete logic, including stack operations (Artem)
+		; Save registers
+		PUSH {R4-R5}
+		
+		; Initialize pointers and counter
+		MOV R3, R0	; Save orginial dest for return
+		MOV R4, R1  ; src pointer
+		MOV R5, R2	; Size counter
+		
+copy_loop
+		; Check if size == 0
+		CMP R5, #0
+		BEQ done
+		
+		; Load byte from src and increment
+		LDRB R2, [R4], #1
+		
+		; Check for null terminator
+		CMP R2, #0
+		BEQ null_found
+		
+		; Store byte to dest and increment
+		STRB R2, [R0], #1
+		
+		; Decerement size and loop
+		SUBS R5, R5, #1
+		B copy_loop
+		
+null_found
+		; Padd remaining bytes with null
+		MOV R2, #0
+		
+pad_loop
+		CMP R5, #0
+		BEQ done
+		STRB R2, [R0], #1
+		SUBS R5, R5, #1
+		B pad_loop
+		
+done
+		; Restore registers and return orginal dest
+		MOV R0, R3
+		POP {R4-R5}
+		BX LR
+		
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; void* _malloc( int size )
