@@ -98,10 +98,19 @@ done
 		EXPORT	_malloc
 _malloc
 		; save registers
+		PUSH {R4-R11} ;may need to change
 		; set the system call # to R7
-	        SVC     #0x0
+		
+		; Artems Changes
+			MOV R7, #3		; From Table 3 SVC number for malloc
+	        SVC     #0x0	; Invoke supervisor call
+			MOV R0, #0		; Return NULL (temporary)
+			POP {R4-R11} 	;may need to change
+			BX LR
+		; Artems Changes	
+		
 		; resume registers
-		MOV		pc, lr
+		;MOV		pc, lr (Artem - I Commented this out)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; void _free( void* addr )
@@ -112,10 +121,18 @@ _malloc
 		EXPORT	_free
 _free
 		; save registers
+		PUSH {R4-R11} ;may need to change
 		; set the system call # to R7
+		
+		; Artems Changes
+			MOV R7, #4		; SVC number for free
         	SVC     #0x0
+			POP {R4-R11} 	;may need to change
+			BX LR			; Just return					
+		; Artems Changes	
+			
 		; resume registers
-		MOV		pc, lr
+		;MOV		pc, lr (Artem - I Commented this out)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; unsigned int _alarm( unsigned int seconds )
@@ -128,10 +145,19 @@ _free
 		EXPORT	_alarm
 _alarm
 		; save registers
+		PUSH {R4-R11} ;may need to change
 		; set the system call # to R7
-        	SVC     #0x0
+		
+		; Artems Changes
+			MOV R7, #1		; SVC number for alarm
+        	SVC     #0x0	
+			MOV R0, #0		; Return 0
+			POP {R4-R11} 	;may need to change
+			BX LR								
+		; Artems Changes	
+			
 		; resume registers	
-		MOV		pc, lr		
+		;MOV		pc, lr (Artem - I Commented this out)
 			
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; void* _signal( int signum, void *handler )
@@ -144,10 +170,19 @@ _alarm
 		EXPORT	_signal
 _signal
 		; save registers
+		PUSH {R4-R11} ;may need to change
 		; set the system call # to R7
+		
+		; Artems Changes
+			MOV R7, #2		; SVC number for signal
         	SVC     #0x0
+			MOV R0, R1		; Return handler (per spec page 10)
+			POP {R4-R11} 	;may need to change
+			BX LR								
+		; Artems Changes	
+			
 		; resume registers
-		MOV		pc, lr	
+		;MOV		pc, lr (Artem - I Commented this out)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		END			
