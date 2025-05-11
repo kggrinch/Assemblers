@@ -207,10 +207,12 @@ Reset_Handler   PROC
                 IMPORT  SystemInit
 				IMPORT  __main
 				
-				; Added new imports
-				;IMPORT  _kinit                  
-                ;IMPORT  _timer_init
-                ;IMPORT  _systemcall_table_init
+				; Added new imports                 
+                IMPORT  _timer_init
+				IMPORT	_heap_init
+				IMPORT 	_timer_update
+                IMPORT  _syscall_table_init   ; Might be a typo
+				IMPORT  _syscall_table_jump
 	
 			; Store __initial_sp into MSP (Step 1 toward Midpoint Report)
 				LDR		R0, =__initial_sp 	; save intial stack to temp register | A
@@ -221,10 +223,15 @@ Reset_Handler   PROC
 				BLX     R0
 
 			; Initialize the system call table (Step 2)
-
-				LDR 	R0, =SVC_Handler
+				LDR 	R0, =_syscall_table_init
 				BLX 	R0
-			; Initialize the heap space (Step 2)
+			; Initialize the heap space (Step 2) - todo
+				LDR		R0, =_timer_init
+				BLX		R0
+				
+				LDR		R0, =_heap_init
+				BLX		R0
+			
 			; Initialize the SysTick timer (Step 2)
 				LDR 	R0, =SysTick_Handler
 				BLX 	R0
@@ -270,10 +277,15 @@ UsageFault_Handler\
                 ENDP
 SVC_Handler     PROC 		; (Step 2)
 				EXPORT  SVC_Handler               [WEAK]
-			; Save registers 
-			; Invoke _syscall_table_ump
-			; Retrieve registers
-			; Go back to stdlib.s
+				; Save registers 
+				PUSH	{R4-R11, LR}
+				; Invoke _syscall_table_jump
+				LDR		R12, =_syscall_table_jump	; Save _syscall_table_init address into register
+				BLX		R12							; Branch to _syscall_table_init in SVC.s
+				; Retrieve registers
+				POP		{R4-R11, LR}
+				; Go back to stdlib.s
+				BX		LR
                 B       .
                 ENDP
 DebugMon_Handler\
@@ -290,11 +302,20 @@ SysTick_Handler\
                 PROC		; (Step 2)
         	EXPORT  SysTick_Handler           [WEAK]
 		; Save registers
+			PUSH	{R4-R11, LR}
 		; Invoke _timer_update
+			LDR		R12, =_timer_update
+			BLX		R12
 		; Retrieve registers
+			POP	{R4-R11, LR}
 		; Change from MSP to PSP
+			MOV		R0, #0x2				; Move into temp register to activiate PSP | 0010
+			MRS		R1, CONTROL
+			ORR		R0, R0, R1				; Change to psp mode set bit 1 to 1 in the control register | 0000 00[]0 set that bit to 1 for psp mode
+			MSR		CONTROL, R0				; Control register - 0000 0010 
 		; Go back to the user program
-                B       .
+			BX		LR
+				B       .
                 ENDP
 
 GPIOA_Handler\

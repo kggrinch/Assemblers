@@ -15,7 +15,7 @@ SIGALRM		EQU		14			; sig alarm
 
 ; System Variables
 SECOND_LEFT	EQU		0x20007B80		; Secounds left for alarm( )
-USR_HANDLER     EQU		0x20007B84		; Address of a user-given signal handler function	
+USR_HANDLER EQU		0x20007B84		; Address of a user-given signal handler function	
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Timer initialization
@@ -48,9 +48,9 @@ _timer_update
 ; Timer update
 ; void* signal_handler( int signum, void* handler )
 	    EXPORT	_signal_handler
-_signal_handler
+
 	;; Implement by yourself
-	
+_signal_handler	
 		MOV		pc, lr		; return to Reset_Handler
 		
 		END		

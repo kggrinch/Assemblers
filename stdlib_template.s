@@ -98,14 +98,16 @@ done
 		EXPORT	_malloc
 _malloc
 		; save registers
+		MOV	 R4, R0	; save argument
 		PUSH {R4-R11} ;may need to change
 		; set the system call # to R7
 		
 		; Artems Changes
-			MOV R7, #3		; From Table 3 SVC number for malloc
+			MOV R7, #4		; From Table 3 SVC number for malloc
 	        SVC     #0x0	; Invoke supervisor call
 			MOV R0, #0		; Return NULL (temporary)
 			POP {R4-R11} 	;may need to change
+			MOV	R0, R4		; Might need to check if the malloc was successful before returning r0
 			BX LR
 		; Artems Changes	
 		
@@ -125,7 +127,7 @@ _free
 		; set the system call # to R7
 		
 		; Artems Changes
-			MOV R7, #4		; SVC number for free
+			MOV R7, #5		; SVC number for free
         	SVC     #0x0
 			POP {R4-R11} 	;may need to change
 			BX LR			; Just return					
