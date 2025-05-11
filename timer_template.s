@@ -22,35 +22,95 @@ USR_HANDLER     EQU		0x20007B84		; Address of a user-given signal handler functi
 ; void timer_init( )
 		EXPORT		_timer_init
 _timer_init
-	;; Implement by yourself
-	
-		MOV		pc, lr		; return to Reset_Handler
+        ; Stop timer
+        LDR R0, =STCTRL
+        LDR R1, =STCTRL_STOP
+        STR R1, [R0]
+
+        ; Set reload value
+        LDR R0, =STRELOAD
+        LDR R1, =STRELOAD_MX
+        STR R1, [R0]
+
+        ; Clear current value
+        LDR R0, =STCURRENT
+        LDR R1, =STCURR_CLR
+        STR R1, [R0]
+
+        BX LR
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Timer start
 ; int timer_start( int seconds )
 		EXPORT		_timer_start
 _timer_start
-	;; Implement by yourself
-	
-		MOV		pc, lr		; return to SVC_Handler
+		; Save previous value
+        LDR R1, =SECOND_LEFT
+        LDR R2, [R1]        ; Previous value -> R2 (return value)
+        STR R0, [R1]        ; Store new seconds
+
+        ; Start timer
+        LDR R1, =STCTRL
+        LDR R0, =STCTRL_GO
+        STR R0, [R1]
+
+        ; Clear current value
+        LDR R0, =STCURRENT
+        MOV R1, #0
+        STR R1, [R0]
+
+        ; Return previous value
+        MOV R0, R2
+        BX LR
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Timer update
 ; void timer_update( )
 		EXPORT		_timer_update
 _timer_update
-	;; Implement by yourself
-	
-		MOV		pc, lr		; return to SysTick_Handler
+		PUSH {R0-R2, LR}
+
+        ; Decrement counter
+        LDR R0, =SECOND_LEFT
+        LDR R1, [R0]
+        SUBS R1, R1, #1
+        STR R1, [R0]
+
+        ; Check if reached zero
+        CMP R1, #0
+        BNE _update_done
+
+        ; Stop timer
+        LDR R0, =STCTRL
+        LDR R1, =STCTRL_STOP
+        STR R1, [R0]
+
+        ; Call handler if not NULL
+        LDR R0, =USR_HANDLER
+        LDR R1, [R0]
+        CMP R1, #0
+        BEQ _update_done
+        BLX R1
+
+_update_done
+        POP {R0-R2, LR}
+        BX LR
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Timer update
 ; void* signal_handler( int signum, void* handler )
 	    EXPORT	_signal_handler
 _signal_handler
-	;; Implement by yourself
-	
-		MOV		pc, lr		; return to Reset_Handler
+		; Only handle SIGALRM (14)
+        CMP R0, #SIGALRM
+        BNE _signal_done
+
+        ; Swap handler
+        LDR R2, =USR_HANDLER
+        LDR R0, [R2]        ; Return old handler
+        STR R1, [R2]        ; Store new handler
+
+_signal_done
+        BX LR
 		
-		END		
+		END

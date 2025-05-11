@@ -217,17 +217,21 @@ Reset_Handler   PROC
 				MSR 	MSP, R0 			; load intial stack from temp register to MSP special register | A
 
 				ISB     ; Let's leave as is from the original.
+				
                 LDR     R0, =SystemInit
 				BLX     R0
 
 			; Initialize the system call table (Step 2)
-
-				LDR 	R0, =SVC_Handler
-				BLX 	R0
 			; Initialize the heap space (Step 2)
 			; Initialize the SysTick timer (Step 2)
-				LDR 	R0, =SysTick_Handler
-				BLX 	R0
+				;LDR     R0, =_kinit
+				;BLX     R0
+
+				;LDR     R0, =_timer_init
+				;BLX     R0
+
+				;LDR     R0, =_systemcall_table_init
+				;BLX     R0
 			
 			; Store __initial_user_sp into PSP (Step 1 toward Midpoint Report)
 				LDR		R0, =__initial_user_sp 	; save intial user stack to temp register
