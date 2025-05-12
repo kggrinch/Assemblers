@@ -224,9 +224,6 @@ Reset_Handler   PROC
 				BLX     R0
 
 			; Initialize the system call table (Step 2)
-<<<<<<< HEAD
-			; Initialize the heap space (Step 2)
-=======
 				LDR 	R0, =_syscall_table_init
 				BLX 	R0
 			; Initialize the heap space (Step 2) - todo
@@ -236,16 +233,6 @@ Reset_Handler   PROC
 				LDR		R0, =_heap_init
 				BLX		R0
 			
->>>>>>> 1dd5ff10f877cda3695b4667988fc99c1199e5a4
-			; Initialize the SysTick timer (Step 2)
-				;LDR     R0, =_kinit
-				;BLX     R0
-
-				;LDR     R0, =_timer_init
-				;BLX     R0
-
-				;LDR     R0, =_systemcall_table_init
-				;BLX     R0
 			
 			; Store __initial_user_sp into PSP (Step 1 toward Midpoint Report)
 				LDR		R0, =__initial_user_sp 	; save intial user stack to temp register
