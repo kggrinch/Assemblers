@@ -19,7 +19,7 @@ INVALID		EQU		-1				; an invalid id
 ; Memory Control Block Initialization
 		EXPORT	_heap_init
 _heap_init
-	;; Implement by yourself
+	; Implement by yourself
 		; Zeroing the heap space: no need to implement in step 2's assembly code.
 		
 		; Initialize MCB
@@ -51,7 +51,85 @@ _break
 ; void* _k_alloc( int size )
 		EXPORT	_kalloc
 _kalloc
-	;; Implement by yourself
+	; Implement by yourself
+		
+		; Save register
+		PUSH 	{R4, R11, LR}
+		
+		; Intitialize the MCB
+		LDR		R1, =MCB_TOP	; [R1 = Left]
+		LDR		R2, =MCB_BOT	; [R2 = Right]
+		LDR		R3, =MCB_ENT_SZ ; [R3 = MCB_ENT_SZ]
+		
+		;Correct Size if needed
+		; If Passed in size is >= 32 bytes continue to ralloc otherwise set minimum size to 32 bytes
+		CMP		R0, #32
+		BGE		_ralloc		; r0 >=	32
+		
+_else_condition
+		MOV		R0, #32
+		
+_ralloc	
+
+		; Setting up variables
+		; Entire
+		ADDS	R4, R1, R3
+		SUBS	R4, R2, R4		; [R4 = Entire] = right - left + mcb_ent_sz
+		
+		; Half
+		ASR		R5, R4, #1		; [R5 = Half] = Entire / 2 | This might be incorrect due to ASR double check and if anything use the DIVS instead of ASR
+		
+		; Midpoint
+		ADDS	R6, R1, R5		; [R6 = Midpointer] = left + half
+		
+		; Heap_addr
+		MOV		R7, #0;			; [R7 = Heap_addr] = null
+		
+		; Act_Entire_Size
+		LSL		R8, R4, #4		; [R8 = Act_Entire_Size] = Entire * 16	| This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		
+		; Act_Half_Size
+		LSL		R9, R5, #4		; [R9 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		
+		
+		; Start of space search
+		CMP		R0, R9
+		BLE		_if_condition1	; If size >= act_half_size go to _if_condition1
+		
+								; Else
+		; Check if space is avaliable by using a condition to check if its occupied
+		; If Check code here
+								; Else - we have entire space here		
+		; Check if space can fit
+		; If Check code here
+		
+								; Else
+		; Cant fit return null
+		
+		
+_if_condition1					; if_condition1 = size <= act_half_size
+; Might do recursion here
+		
+; Check if heap_addr == null - means we found a space that couldnt fit on the left side. lets go right
+
+							
+;_if>>>_if_condition			; _if>>>_if_condition Check if heap_addr == null = were going right
+; Recursive call here to go right
+
+; After recursive call split the parent MCB with another condition
+
+
+
+		
+		
+		
+;_else>>>_if_condition			; else>>>if_condition = Checking if space if avaliable
+
+
+;_else>>>_else>>>_if_condition	; _else>>>_else>>>_if_condition = Checking if size can fit into the avalible space
+; If code can fit update the MCB block with the new space and return the actuall heap address
+
+		
 		MOV		pc, lr
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
