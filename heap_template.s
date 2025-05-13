@@ -137,83 +137,114 @@ _if_condition1					; if_condition1 = size <= act_half_size
 ; void free( void *ptr )
 		EXPORT	_kfree
 _kfree
-		CMP     R0, #0              ; Check for NULL pointer
-        BXEQ    LR                  ; If NULL, return immediately
-        
-        PUSH    {R0-R1, LR}
+		CMP     R0, #0                  ; Check for NULL pointer
+        BXEQ    LR                      ; Return NULL if ptr is NULL
+
+        PUSH    {R1-R2, LR}            ; Save registers
         LDR     R1, =HEAP_TOP
-        SUBS    R0, R0, R1          ; R0 = offset from heap start
-        CMP     R0, #MAX_SIZE       ; Validate pointer is within heap
-        BHS     _kfree_invalid      ; If out of bounds, skip
-        LSRS    R0, R0, #5          ; Divide by 32 (MIN_SIZE)
-        BL      _rfree
-_kfree_invalid
-        POP     {R0-R1, LR}
+        LDR     R2, =HEAP_BOT
+        CMP     R0, R1                  ; Check if ptr < HEAP_TOP
+        BLO     _kfree_fail
+        CMP     R0, R2                  ; Check if ptr > HEAP_BOT
+        BHI     _kfree_fail
+
+        ; Compute MCB address: mcb_top + (ptr - heap_top) / 16
+        SUBS    R0, R0, R1              ; R0 = ptr - heap_top
+        LSRS    R0, R0, #4              ; Divide by 16
+        LDR     R1, =MCB_TOP
+        ADDS    R0, R1, R0              ; R0 = mcb_addr
+
+        BL      _rfree                  ; Call _rfree(mcb_addr)
+        CMP     R0, #0                  ; Check if _rfree failed
+        BEQ     _kfree_fail
+
+        ; Success: return original ptr (restore from stack)
+        POP     {R1-R2, LR}             ; Restore registers
+        BX      LR                      ; Return ptr
+
+_kfree_fail
+        MOVS    R0, #0                  ; Return NULL
+        POP     {R1-R2, LR}
         BX      LR
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recursive Free Function
 ; void _rfree(int index)
+		EXPORT  _rfree
 _rfree
-        PUSH    {R0-R7, LR}
+        PUSH    {R4-R7, LR}             ; Save registers
 
-        ; Calculate MCB address
+        ; Load MCB contents
+        LDRH    R3, [R0]                ; R3 = mcb_contents
+        LSRS    R4, R3, #4              ; R4 = mcb_chunk (size in units)
+        LSLS    R4, R4, #4              ; R4 = my_size (clears used bit)
+
+        ; Mark as free
+        STRH    R4, [R0]                ; Clear used bit in MCB
+
+        ; Calculate mcb_offset and check left/right
         LDR     R1, =MCB_TOP
-        LSLS    R2, R0, #1          ; index * 2
-        ADDS    R1, R1, R2          ; R1 = &mcb[index]
+        SUBS    R5, R0, R1              ; R5 = mcb_offset
+        LSRS    R6, R4, #4              ; R6 = mcb_chunk (size in units)
+        UDIV    R7, R5, R6              ; R7 = mcb_offset / mcb_chunk
+        ANDS    R7, R7, #1              ; R7 % 2
+        CMP     R7, #0
+        BNE     _rfree_right
 
-        ; Get current block info
-        LDRH    R3, [R1]            ; R3 = mcb[index]
-        LSRS    R4, R3, #4          ; R4 = size in 32B units
-        LSLS    R4, R4, #4          ; R4 = size in original bits
-        BICS    R3, R3, #1          ; Clear in-use bit
-        STRH    R3, [R1]            ; Mark as free
+        ; Left block case
+        ADDS    R6, R0, R6              ; R6 = buddy_addr (mcb_addr + mcb_chunk)
+        LDR     R1, =MCB_BOT
+        CMP     R6, R2                  ; Check if buddy is beyond MCB_BOT
+        BHS     _rfree_done
 
-        ; Find buddy (index ^ size_in_blocks)
-        LSRS    R5, R4, #4          ; R5 = size in blocks
-        EORS    R6, R0, R5          ; R6 = buddy index
+        LDRH    R3, [R6]                ; R3 = buddy_contents
+        TST     R3, #1                  ; Check buddy's used bit
+        BNE     _rfree_done
 
-        ; Validate buddy index
-        CMP     R6, #MCB_TOTAL
-        BHS     _free_done          ; Use BHS instead of BGE for unsigned
+        ; Buddy is free, check size
+        LSRS    R7, R3, #4
+        LSLS    R7, R7, #4              ; R7 = buddy_size (cleared used bit)
+        CMP     R7, R4                  ; Compare with my_size
+        BNE     _rfree_done
 
-        ; Check buddy compatibility
-        LSLS    R2, R6, #1
-        LDR     R7, =MCB_TOP
-        ADDS    R7, R7, R2          ; R7 = &mcb[buddy]
-        LDRH    R2, [R7]            ; R2 = buddy entry
-        
-        LSRS    R3, R2, #4
-        LSLS    R3, R3, #4          ; R3 = buddy's size bits
-        CMP     R3, R4              ; Same size?
-        BNE     _free_done
-        TST     R2, #1              ; Buddy free?
-        BNE     _free_done
-
-        ; Merge blocks
+        ; Merge with buddy
         MOVS    R3, #0
-        STRH    R3, [R1]            ; Clear current
-        STRH    R3, [R7]            ; Clear buddy
+        STRH    R3, [R6]                ; Clear buddy
+        LSLS    R4, R4, #1              ; Double size
+        STRH    R4, [R0]                ; Update current block
+        BL      _rfree                  ; Recurse
+        B       _rfree_exit
 
-        ; Parent is min(index, buddy)
-        CMP     R0, R6
-        ITE     LT
-        MOVLT   R0, R0
-        MOVGE   R0, R6
-
-        ; Set parent size (size*2 + 1)
-        LSLS    R4, R4, #1          ; Double size
-        ADDS    R4, R4, #1          ; Mark as used
-        LSLS    R2, R0, #1
+_rfree_right
+        ; Right block case
         LDR     R1, =MCB_TOP
-        ADDS    R1, R1, R2
-        STRH    R4, [R1]
+        SUBS    R6, R0, R4              ; R6 = buddy_addr (mcb_addr - chunk_size_in_bytes)
+        CMP     R6, R1                  ; Check if buddy is below MCB_TOP
+        BLO     _rfree_done
 
-        ; Recurse
-        BL      _rfree
+        LDRH    R3, [R6]                ; R3 = buddy_contents
+        TST     R3, #1                  ; Check buddy's used bit
+        BNE     _rfree_done
 
-_free_done
-        POP     {R0-R7, LR}
-        BX      LR	
+        ; Buddy is free, check size
+        LSRS    R7, R3, #4
+        LSLS    R7, R7, #4              ; R7 = buddy_size (cleared used bit)
+        CMP     R7, R4                  ; Compare with my_size
+        BNE     _rfree_done
+
+        ; Merge with buddy
+        MOVS    R3, #0
+        STRH    R3, [R0]                ; Clear current block
+        LSLS    R4, R4, #1              ; Double size
+        STRH    R4, [R6]                ; Update buddy
+        MOV     R0, R6                  ; Set buddy as new mcb_addr
+        BL      _rfree                  ; Recurse
+        B       _rfree_exit
+
+_rfree_done
+        ; Return mcb_addr (success)
+        MOV     R0, R0                  ; R0 still holds mcb_addr
+_rfree_exit
+        POP     {R4-R7, PC}             ; Restore registers and return
 
 		END
