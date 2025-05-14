@@ -81,10 +81,10 @@ _ralloc
 		PUSH 	{R4-R11, LR}			; Save register and link register
 		
 		; Setting up variables						
-										;[R3 = Entire] = right - left + mcb_ent_sz
-		LDR		R9, =MCB_ENT_SZ
-		ADDS	R3, R1, R9	 			;R3 = left + mcb_ent_sz
-		SUBS	R3, R2, R3			 	;R3 = right - (left + mcb_ent_sz)	
+
+		LDR		R9, =MCB_ENT_SZ			;[R3 = Entire] = right - left + mcb_ent_sz
+		SUBS	R3, R2, R1				;R3 = right - left
+		ADDS	R3, R3, R9	 			;R3 = (right - left) + mcb_ent_sz	
 		
 		MOV		R9, #1
 		ASR		R4, R3, #1				;[R4 = Half] = Entire / 2 | This might be incorrect due to ASR double check and if anything use the DIVS instead of ASR
@@ -96,7 +96,7 @@ _ralloc
 		MOV		R9, #16
 		MUL		R7, R3, R9				;[R7 = Act_Entire_Size] = Entire * 16	| This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
 		
-		LSL		R8, R4, R9				;[R8 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		MUL		R8, R4, R9				;[R8 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
 		
 		
 										; Start of memory space search
