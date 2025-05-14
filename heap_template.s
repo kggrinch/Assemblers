@@ -26,7 +26,7 @@ _heap_init
 		LDR		R0, =MCB_TOP		;R0 = mcb[0] - root | r0 will represent the index of mcb so i
 		LDR		R1, =MAX_SIZE		;R1 = max bytes in heap
 		STRH	R1, [R0], #0x4		;Set max bytes into root to indicate memory avaliable 
-									; Post increment by four to keep the addresses memory aligned in the loop. So the loop starts at .....4 memory
+									;Post increment by four to keep the addresses memory aligned in the loop. So the loop starts at .....4 memory
 									
 		LDR		R2, =MCB_BOT		; Condition
 		MOV		R3, #0				; Value to store in the rest of the MCB index
@@ -38,7 +38,7 @@ _loop
 		BGE		_break
 		
 		; This is incrementing the index of mcb mcb[i] by incrmenting by two memory addresses since each memory address holds two bytes
-		STRH 	R3, [R0, #0x2]!			; store 0 into all the other MCB indexes to represnted unused space | MCB index i++
+		STRH 	R3, [R0], #0x2		; store 0 into all the other MCB indexes to represnted unused space | MCB index i++
 		B		_loop
 			
 			
@@ -53,84 +53,116 @@ _break
 _kalloc
 	; Implement by yourself
 		
-		; Save register
-		PUSH 	{R4, R11, LR}
+						
+		PUSH 	{R4, R11, LR}	; Save called in registers
 		
 		; Intitialize the MCB
 		LDR		R1, =MCB_TOP	; [R1 = Left]
 		LDR		R2, =MCB_BOT	; [R2 = Right]
-		LDR		R3, =MCB_ENT_SZ ; [R3 = MCB_ENT_SZ]
 		
-		;Correct Size if needed
-		; If Passed in size is >= 32 bytes continue to ralloc otherwise set minimum size to 32 bytes
-		CMP		R0, #32
-		BGE		_ralloc		; r0 >=	32
+								
+		CMP		R0, #32			; Check if passed in size is valid. If not give it the minimum size
+		BLT		_minimum_size
+		B		_recursive_branch
 		
-_else_condition
+_minimum_size
 		MOV		R0, #32
 		
+_recursive_branch	
+		BL		_ralloc
+		POP		{R4-R11, LR}			; Restore and return
+		MOV		PC, LR
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Recursive Malloc Memory Allocation Function
+; void* _r_alloc(int size, int left, int right)
 _ralloc	
+		
+		PUSH 	{R4-R11, LR}			; Save register and link register
+		
+		; Setting up variables						
+										;[R3 = Entire] = right - left + mcb_ent_sz
+		ADDS	R3, R1, #MCB_ENT_SZ	 	;R3 = left + mcb_ent_sz
+		SUBS	R3, R2, R3			 	;R3 = right - (left + mcb_ent_sz)	
+		
+		ASR		R4, R3, #1				;[R4 = Half] = Entire / 2 | This might be incorrect due to ASR double check and if anything use the DIVS instead of ASR
+		
+		ADDS	R5, R1, R4				;[R5 = Midpointer] = left + half
+		
+		MOV		R6, #0;					;[R6 = Heap_addr] = null
+		
+		LSL		R7, R3, #4				;[R7 = Act_Entire_Size] = Entire * 16	| This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		
+		LSL		R8, R4, #4				;[R8 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		
+		
+										; Start of memory space search
+		CMP		R0, R8
+		BGT		_else					; If size <= act_half_size go to _if
+		
+		; _if - recursive call left
+										
+		; heap_addr = _ralloc( size, left, midpoint - mcb_ent_sz );
+		MOV		R0, R0					; leave size unchanged
+		MOV		R1, R1					; leave left unchanged
+		PUSH	{R2}					; Save original right
+		SUBS	R2, R5, #MCB_ENT_SZ		; midpoint - mcb_ent_sz
+		BL		_ralloc	
+		POP		{R2}					; Restore original right
+		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null return, Otherwise go right
+		BNE		_split_parent
+		
+										; Go Right
+		; return _ralloc( size, midpoint, right);							
+		MOV		R0, R0					; leave size unchanged
+		PUSH	{R1}					; save original left
+		MOV		R1, R5					; left = midpoint
+		MOV		R2, R2					; leave right unchanged
+		BL		_ralloc
+		POP		{R1}					; Restore original right
+		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null then split parent and return heap_addr, Otherwise return null heap is full
+		BEQ		_return_null			
+		B		_split_parent			
+		
 
-		; Setting up variables
-		; Entire
-		ADDS	R4, R1, R3
-		SUBS	R4, R2, R4		; [R4 = Entire] = right - left + mcb_ent_sz
-		
-		; Half
-		ASR		R5, R4, #1		; [R5 = Half] = Entire / 2 | This might be incorrect due to ASR double check and if anything use the DIVS instead of ASR
-		
-		; Midpoint
-		ADDS	R6, R1, R5		; [R6 = Midpointer] = left + half
-		
-		; Heap_addr
-		MOV		R7, #0;			; [R7 = Heap_addr] = null
-		
-		; Act_Entire_Size
-		LSL		R8, R4, #4		; [R8 = Act_Entire_Size] = Entire * 16	| This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
-		
-		; Act_Half_Size
-		LSL		R9, R5, #4		; [R9 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
-		
-		
-		; Start of space search
-		CMP		R0, R9
-		BLE		_if_condition1	; If size >= act_half_size go to _if_condition1
-		
-								; Else
-		; Check if space is avaliable by using a condition to check if its occupied
-		; If Check code here
-								; Else - we have entire space here		
-		; Check if space can fit
-		; If Check code here
-		
-								; Else
-		; Cant fit return null
-		
-		
-_if_condition1					; if_condition1 = size <= act_half_size
-; Might do recursion here
-		
-; Check if heap_addr == null - means we found a space that couldnt fit on the left side. lets go right
+_else	; Try allocating entire space
 
-							
-;_if>>>_if_condition			; _if>>>_if_condition Check if heap_addr == null = were going right
-; Recursive call here to go right
-
-; After recursive call split the parent MCB with another condition
+		LDRH 	R9, [R1]		; R9 = mcb[left]
+		ANDS	R10, R2, #0x01
+		CMP		R10, #0
+		BNE		_return_null	; If mcb[left] != 0 memory space used return null. Otherwise, we have an entire space
+		
+		; We have an entire space
+		CMP		R9, R7			
+		BLT		_return_null	; If mcb[left] < act_entire_size cant fit return null. Otherwise, computre heap address
+		
+		; Convert memory spot to occupied
+		ORR		R10, R7, #0x01	; change bit sign to indicate space is now used
+		STRH	R10, [R1]		; insert changed bit into mcb block
+		
+		; Compute the corresponding heap address R0 = heap_top + ( left - mcb_top ) * 16 
+		LDR		R2, =HEAP_TOP
+		SUBS	R0, R1, R2			; R0 = left - mcb_top
+		ADDS	R0, R2, R0, LSL #4	; R0 = heap_top + ( left - mcb_top ) * 16 
+		B		_ralloc_return
 
 
-
+_split_parent
+		LDRH	R9, [R5]		;Load data from midpoint
+		ANDS	R10, R9, #0x01		
+		CMP		R10, #0			; If MCB[midpoint] != 0 - parent already split _ralloc_return, Otherwise split the parent
+		BNE		_ralloc_return
 		
-		
-		
-;_else>>>_if_condition			; else>>>if_condition = Checking if space if avaliable
+		;else
+		STRH	R8, [R9]		; Store act_half_size into mcb[midpoint]
+		B	_ralloc_return	
+	
+_return_null
+		MOV		R0, #0				; Set return register to null
 
-
-;_else>>>_else>>>_if_condition	; _else>>>_else>>>_if_condition = Checking if size can fit into the avalible space
-; If code can fit update the MCB block with the new space and return the actuall heap address
-
-		
-		MOV		pc, lr
+_ralloc_return
+		POP     {R4-R11, LR}		; Restore registers
+		MOV		PC, LR				; Return
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Kernel Memory De-allocation
