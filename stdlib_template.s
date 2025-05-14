@@ -107,7 +107,7 @@ _malloc
 	        SVC     #0x0	; Invoke supervisor call
 			MOV R0, #0		; Return NULL (temporary) if malloc was unable to allocate memory. Otherwise Return a pointer to the allocated space
 			POP {R4-R11} 	;may need to change
-			MOV	R0, R4		; Might need to check if the malloc was successful before returning r0
+			;MOV	R0, R4		; Might need to check if the malloc was successful before returning R0
 			BX LR
 		; Artems Changes	
 		

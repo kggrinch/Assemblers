@@ -52,10 +52,10 @@ _syscall_table_jump
 	;; Implement by yourself
 		CMP 	R7, #5	; Might not need to compare for validness
 		BHI	  	_invalid
-		LDR		R0, =SYSTEMCALLTBL
-		LSL		R1, R7, #2
-		ADD		R2, R0, R1
-		LDR		PC, [R0, R1]
+		LDR		R4, =SYSTEMCALLTBL		; R0 = R4
+		LSL		R5, R7, #2				; R1 = R5
+		ADD		R6, R4, R5				; R2 = R6
+		LDR		PC, [R4, R5]
 _invalid	
 		MOV		pc, lr			
 

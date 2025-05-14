@@ -25,7 +25,7 @@ _heap_init
 		; Initialize MCB
 		LDR		R0, =MCB_TOP		;R0 = mcb[0] - root | r0 will represent the index of mcb so i
 		LDR		R1, =MAX_SIZE		;R1 = max bytes in heap
-		STRH	R1, [R0], #0x4		;Set max bytes into root to indicate memory avaliable 
+		STR		R1, [R0], #0x4		;Set max bytes into root to indicate memory avaliable 
 									;Post increment by four to keep the addresses memory aligned in the loop. So the loop starts at .....4 memory
 									
 		LDR		R2, =MCB_BOT		; Condition
@@ -38,7 +38,7 @@ _loop
 		BGE		_break
 		
 		; This is incrementing the index of mcb mcb[i] by incrmenting by two memory addresses since each memory address holds two bytes
-		STRH 	R3, [R0], #0x2		; store 0 into all the other MCB indexes to represnted unused space | MCB index i++
+		STR 	R3, [R0], #0x4		; store 0 into all the other MCB indexes to represnted unused space | MCB index i++
 		B		_loop
 			
 			
@@ -54,7 +54,7 @@ _kalloc
 	; Implement by yourself
 		
 						
-		PUSH 	{R4, R11, LR}	; Save called in registers
+		PUSH 	{R4-R11, LR}	; Save called in registers
 		
 		; Intitialize the MCB
 		LDR		R1, =MCB_TOP	; [R1 = Left]
@@ -82,18 +82,21 @@ _ralloc
 		
 		; Setting up variables						
 										;[R3 = Entire] = right - left + mcb_ent_sz
-		ADDS	R3, R1, #MCB_ENT_SZ	 	;R3 = left + mcb_ent_sz
+		LDR		R9, =MCB_ENT_SZ
+		ADDS	R3, R1, R9	 			;R3 = left + mcb_ent_sz
 		SUBS	R3, R2, R3			 	;R3 = right - (left + mcb_ent_sz)	
 		
+		MOV		R9, #1
 		ASR		R4, R3, #1				;[R4 = Half] = Entire / 2 | This might be incorrect due to ASR double check and if anything use the DIVS instead of ASR
 		
 		ADDS	R5, R1, R4				;[R5 = Midpointer] = left + half
 		
 		MOV		R6, #0;					;[R6 = Heap_addr] = null
 		
-		LSL		R7, R3, #4				;[R7 = Act_Entire_Size] = Entire * 16	| This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		MOV		R9, #16
+		MUL		R7, R3, R9				;[R7 = Act_Entire_Size] = Entire * 16	| This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
 		
-		LSL		R8, R4, #4				;[R8 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
+		LSL		R8, R4, R9				;[R8 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
 		
 		
 										; Start of memory space search
@@ -106,10 +109,11 @@ _ralloc
 		MOV		R0, R0					; leave size unchanged
 		MOV		R1, R1					; leave left unchanged
 		PUSH	{R2}					; Save original right
-		SUBS	R2, R5, #MCB_ENT_SZ		; midpoint - mcb_ent_sz
+		LDR		R9, =MCB_ENT_SZ
+		SUBS	R2, R5, R9				; midpoint - mcb_ent_sz
 		BL		_ralloc	
 		POP		{R2}					; Restore original right
-		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null return, Otherwise go right
+		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null return, Otherwise go right | Original R0 is lost because we are holding the return ptr
 		BNE		_split_parent
 		
 										; Go Right
@@ -121,24 +125,36 @@ _ralloc
 		BL		_ralloc
 		POP		{R1}					; Restore original right
 		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null then split parent and return heap_addr, Otherwise return null heap is full
-		BEQ		_return_null			
+		BEQ		_ralloc_return			
+		
 		B		_split_parent			
 		
 
 _else	; Try allocating entire space
 
-		LDRH 	R9, [R1]		; R9 = mcb[left]
-		ANDS	R10, R2, #0x01
+		; New
+		;PUSH	{R0}			; Save original r0
+		;BL		_m2a			; branch
+		;MOV		R9, R0			; move result into r9
+		;POP		{R0}			; restore original r0
+		;LDR		R10, [R9]		; access value at r9
+		;AND		R11, R10, #0x01
+
+
+
+		; Original
+		LDR 	R9, [R1]		; R9 = mcb[left]
+		AND		R10, R9, #0x01	; r9 was r2
 		CMP		R10, #0
 		BNE		_return_null	; If mcb[left] != 0 memory space used return null. Otherwise, we have an entire space
 		
 		; We have an entire space
 		CMP		R9, R7			
-		BLT		_return_null	; If mcb[left] < act_entire_size cant fit return null. Otherwise, computre heap address
+		BLT		_return_null	; If mcb[left] < act_entire_size cant fit return null. Otherwise, compute heap address
 		
 		; Convert memory spot to occupied
 		ORR		R10, R7, #0x01	; change bit sign to indicate space is now used
-		STRH	R10, [R1]		; insert changed bit into mcb block
+		STR		R10, [R1]		; insert changed bit into mcb block
 		
 		; Compute the corresponding heap address R0 = heap_top + ( left - mcb_top ) * 16 
 		LDR		R2, =HEAP_TOP
@@ -148,14 +164,33 @@ _else	; Try allocating entire space
 
 
 _split_parent
-		LDRH	R9, [R5]		;Load data from midpoint
-		ANDS	R10, R9, #0x01		
+
+		; Adding new here
+		;MOV		R1, R5
+		;BL		_m2a
+		;LDR		R2, [R0]
+		;AND		R2, R2, #0x01
+		;CMP		R2, #0			; If MCB[midpoint] != 0 - parent already split _ralloc_return, Otherwise split the parent
+		;BNE		_ralloc_return
+		
+		;MOV		R2, R7
+		;STR		R2, [R0]
+		;B		_ralloc_return	
+		
+		; Original
+		LDR		R9, [R5]		;Load data from midpoint
+		AND		R10, R9, #0x01		
 		CMP		R10, #0			; If MCB[midpoint] != 0 - parent already split _ralloc_return, Otherwise split the parent
 		BNE		_ralloc_return
 		
 		;else
-		STRH	R8, [R9]		; Store act_half_size into mcb[midpoint]
+		STR		R8, [R9]		; Store act_half_size into mcb[midpoint]
 		B	_ralloc_return	
+	
+	
+_m2a
+		
+	
 	
 _return_null
 		MOV		R0, #0				; Set return register to null
