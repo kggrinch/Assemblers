@@ -109,22 +109,29 @@ _ralloc
 		MOV		R0, R0					; leave size unchanged
 		MOV		R1, R1					; leave left unchanged
 		PUSH	{R2}					; Save original right
+		PUSH	{R0}
 		LDR		R9, =MCB_ENT_SZ
 		SUBS	R2, R5, R9				; midpoint - mcb_ent_sz
 		BL		_ralloc	
-		POP		{R2}					; Restore original right
-		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null return, Otherwise go right | Original R0 is lost because we are holding the return ptr
+		MOV		R6, R0					; Store heap address to heap_add variable r6
+		POP		{R0}					; Retore original r0 argument (size)
+		POP		{R2}					; Restore original right)
+		CMP		R6, #0					; R0 contains the heap_addr | If R0 != null return, Otherwise go right | Original R0 is lost because we are holding the return ptr
 		BNE		_split_parent
 		
 										; Go Right
-		; return _ralloc( size, midpoint, right);							
+		; return _ralloc( size, midpoint, right);	
+		
 		MOV		R0, R0					; leave size unchanged
 		PUSH	{R1}					; save original left
+		PUSH	{R0}					; save original r0 size argument
 		MOV		R1, R5					; left = midpoint
 		MOV		R2, R2					; leave right unchanged
 		BL		_ralloc
+		MOV		R6, R0					; Save returned heap address into heap_addr variable r6
+		POP		{R0}					; Restore original r0 size
 		POP		{R1}					; Restore original right
-		CMP		R0, #0					; R0 contains the heap_addr | If R0 != null then split parent and return heap_addr, Otherwise return null heap is full
+		CMP		R6, #0					; R6 contains the heap_addr | R6 != null then split parent and return heap_addr, Otherwise return null heap is full
 		BEQ		_ralloc_return			
 		
 		B		_split_parent			
@@ -157,9 +164,13 @@ _else	; Try allocating entire space
 		STR		R10, [R1]		; insert changed bit into mcb block
 		
 		; Compute the corresponding heap address R0 = heap_top + ( left - mcb_top ) * 16 
-		LDR		R2, =HEAP_TOP
-		SUBS	R0, R1, R2			; R0 = left - mcb_top
-		ADDS	R0, R2, R0, LSL #4	; R0 = heap_top + ( left - mcb_top ) * 16 
+		; Might be computing the corresponding heap address incorrectly
+		LDR		R10, =HEAP_TOP
+		LDR		R11, =MCB_TOP
+		MOV		R12, #16
+		SUBS	R6, R1, R11			; R6(heap_address) = left - mcb_top
+		MUL		R6, R6, R12			; R6(heap_address) = (left - mcb_top) * 16
+		ADDS	R6, R6, R10			;  R6(heap_address) = ((left - mcb_top) * 16) + heap_top 
 		B		_ralloc_return
 
 
@@ -184,18 +195,19 @@ _split_parent
 		BNE		_ralloc_return
 		
 		;else
-		STR		R8, [R9]		; Store act_half_size into mcb[midpoint]
+		STR		R8, [R5]		; Store act_half_size into mcb[midpoint] | Was r9 but changed to r5 because we need to store the value into the mcb[midpoint]
 		B	_ralloc_return	
 	
 	
-_m2a
+_m2a	; Might not need
 		
 	
 	
 _return_null
-		MOV		R0, #0				; Set return register to null
+		MOV		R6, #0				; Set return register to null
 
 _ralloc_return
+		MOV		R0, R6				; Store the heap address into r0
 		POP     {R4-R11, LR}		; Restore registers
 		MOV		PC, LR				; Return
 		

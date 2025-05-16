@@ -25,7 +25,7 @@ int main( ) {
 	_strncpy( stringB, stringA, 40 );
 	_bzero( stringA, 40 );
 	void* mem1 = _malloc( 1024 ); // Argument passed in bytes. 1024 bytes - 1 kilobyte
-	void* mem2 = _malloc( 1024 );
+	void* mem2 = _malloc( 1024 );	// AS of right now mem variables do not hold the address of the memory in heap - need to fix
 	void* mem3 = _malloc( 8192 );	
 	void* mem4 = _malloc( 4096 );
 	void* mem5 = _malloc( 512 );

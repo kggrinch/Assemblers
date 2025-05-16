@@ -50,12 +50,21 @@ _syscall_table_init
         EXPORT	_syscall_table_jump
 _syscall_table_jump
 	;; Implement by yourself
-		CMP 	R7, #5	; Might not need to compare for validness
+		PUSH 	{R0, R4-R11, LR}
+		CMP 	R7, #5					; Might not need to compare for validness
 		BHI	  	_invalid
-		LDR		R4, =SYSTEMCALLTBL		; R0 = R4
-		LSL		R5, R7, #2				; R1 = R5
-		ADD		R6, R4, R5				; R2 = R6
-		LDR		PC, [R4, R5]
+		LDR		R4, =SYSTEMCALLTBL		
+		MOV		R5, #4
+		MUL		R6,	R7, R5			
+		ADD		R8, R4, R6
+		LDR		R9, [R4, R6]
+		BLX		R9
+		
+		MOV		R12, R0
+		POP		{R0, R4-R11, LR}
+		MOV		R0, R12
+		MOV		PC, LR
+		
 _invalid	
 		MOV		pc, lr			
 
