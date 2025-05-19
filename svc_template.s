@@ -22,52 +22,58 @@ SYS_FREE		EQU		0x5		; address 20007B14
 ; System Call Table Initialization
 		EXPORT	_syscall_table_init
 _syscall_table_init
-	; Implement by yourself
-		LDR 	R0, =SYSTEMCALLTBL
+		LDR 	R0, =SYSTEMCALLTBL		; initialize base system call addr | (address 20007B00)
 		
-		;MOV		R1, =0
-		;STR		R1, [R0], #4
+		; initialize timer_start
+		LDR		R1, =_timer_start		; retreive timer_start location
+		STR		R1, [R0, #4]!			; store timer_start addr at base + 4 |(address 20007B04)
 		
-		LDR		R1, =_timer_start
-		STR		R1, [R0, #4]!
+		; intialize signal handler
+		LDR		R1, =_signal_handler	; retreive _signal_handler location
+		STR		R1, [R0, #4]!			; store _signal_handler addr at base + 8 | (address 20007B08)
 		
-		LDR		R1, =_signal_handler
-		STR		R1, [R0, #4]!
+		; SYS_MEMCPY skipped not part of assignment 
 		
-		;MOV		R1, =0
-		;STR		R1, [R0], #4
+		; intialize _kalloc
+		LDR		R1, =_kalloc			; retreive _kalloc location
+		STR		R1, [R0, #8]!			; store kalloc addr at base + 16 | (address 20007B10)
 		
-		LDR		R1, =_kalloc
-		STR		R1, [R0, #8]!
+		; initialize _kfree
+		LDR		R1, =_kfree				; retreive _kfree location
+		STR		R1, [R0, #4]!			; store _kfree addr at base + 20 | (address 20007B14)
 		
-		LDR		R1, =_kfree
-		STR		R1, [R0, #4]!
-		
-		MOV		pc, lr
+		MOV		pc, lr					; Return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; System Call Table Jump Routine
         EXPORT	_syscall_table_jump
 _syscall_table_jump
-	;; Implement by yourself
-		PUSH 	{R0, R4-R11, LR}
-		CMP 	R7, #5					; Might not need to compare for validness
-		BHI	  	_invalid
-		LDR		R4, =SYSTEMCALLTBL		
-		MOV		R5, #4
-		MUL		R6,	R7, R5			
-		ADD		R8, R4, R6
-		LDR		R9, [R4, R6]
-		BLX		R9
+		PUSH 	{R0, R4-R11, LR}		; Save registers
 		
-		MOV		R12, R0
-		POP		{R0, R4-R11, LR}
-		MOV		R0, R12
-		MOV		PC, LR
+		; Check for valid table jump
+		; if(r7 > #5 || r7 < 0 ) return invalid;
+		CMP 	R7, #5					
+		BGT	  	_invalid				; If R7 > 5	return invalid
+		CMP		R7, #0					
+		BLT		_invalid				; Or if R7 < 0 return invalid
+		
+		; Find corresponsing jump address based off passed in R7 value
+		; Jump addr = base system call + (Table value * 4)
+		LDR		R4, =SYSTEMCALLTBL		; retreive base system call addr
+		MOV		R5, #4					
+		MUL		R6,	R7, R5				; R6 = Table value * 4
+		ADD		R8, R4, R6				; R8 = base system call + (Table value * 4)
+		LDR		R9, [R4, R6]			; R9 = jump addr 
+		BLX		R9						; Branch to jump addr
+		
+		MOV		R12, R0					; Save return value from jump addr into R12
+		POP		{R0, R4-R11, LR}		; Restore original register
+		MOV		R0, R12					; Save return value into R0
+		BX		LR						; Return
 		
 _invalid	
-		MOV		pc, lr			
-
+		MOV		pc, lr					; Return
+		
 		END
 
 

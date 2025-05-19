@@ -207,26 +207,26 @@ Reset_Handler   PROC
                 IMPORT  SystemInit
 				IMPORT  __main
 				
-				; Added new imports                 
+				; Added imports                 
                 IMPORT  _timer_init
 				IMPORT	_heap_init
 				IMPORT 	_timer_update
-                IMPORT  _syscall_table_init   ; Might be a typo
+                IMPORT  _syscall_table_init
 				IMPORT  _syscall_table_jump
 	
-			; Store __initial_sp into MSP (Step 1 toward Midpoint Report)
-				LDR		R0, =__initial_sp 	; save intial stack to temp register | A
-				MSR 	MSP, R0 			; load intial stack from temp register to MSP special register | A
+				; Store __initial_sp into MSP (Step 1 toward Midpoint Report)
+				LDR		R0, =__initial_sp 			; save intial stack to temp register | A
+				MSR 	MSP, R0 					; load intial stack from temp register to MSP special register | A
 
 				ISB     ; Let's leave as is from the original.
 				
                 LDR     R0, =SystemInit
 				BLX     R0
 
-			; Initialize the system call table (Step 2)
+				; Initialize the system call table (Step 2)
 				LDR 	R0, =_syscall_table_init
 				BLX 	R0
-			; Initialize the heap space (Step 2) - todo
+				; Initialize the heap space (Step 2) - todo
 				LDR		R0, =_timer_init
 				BLX		R0
 				
@@ -234,14 +234,14 @@ Reset_Handler   PROC
 				BLX		R0
 			
 			
-			; Store __initial_user_sp into PSP (Step 1 toward Midpoint Report)
-				LDR		R0, =__initial_user_sp 	; save intial user stack to temp register
-				MSR 	PSP, R0					; load intial user stack from temp register to special PSP register | A
-			; Change CPU mode into unprivileged thread mode using PSP | A
-				MOV		R0, #0x3				; Move into temp register to activiate unprivliged bits | A
+				; Store __initial_user_sp into PSP (Step 1 toward Midpoint Report)
+				LDR		R0, =__initial_user_sp 		; save intial user stack to temp register
+				MSR 	PSP, R0						; load intial user stack from temp register to special PSP register
+				; Change CPU mode into unprivileged thread mode using PSP | A
+				MOV		R0, #0x3					; Move into temp register to activiate unprivliged bits
 				MRS		R1, CONTROL
 				ORR		R0, R0, R1
-				MSR		CONTROL, R0				; load into control register to activiate unprivilaged  thread mode | A
+				MSR		CONTROL, R0					; load into control register to activiate unprivilaged  thread mode
 				
                 LDR     R0, =__main
                 BX      R0
@@ -275,14 +275,18 @@ UsageFault_Handler\
                 ENDP
 SVC_Handler     PROC 		; (Step 2)
 				EXPORT  SVC_Handler               [WEAK]
+					
 				; Save registers 
 				PUSH	{R4-R11, LR}
+				
 				; Invoke _syscall_table_jump
 				LDR		R12, =_syscall_table_jump	; Save _syscall_table_init address into register
 				BLX		R12							; Branch to _syscall_table_init in SVC.s
+				
 				; Retrieve registers
 				POP		{R4-R11, LR}				; Save heap_addr in the stack
 				MOV		R4, R0
+				
 				; Go back to stdlib.s
 				BX		LR
                 B       .
@@ -299,21 +303,26 @@ PendSV_Handler\
                 ENDP
 SysTick_Handler\
                 PROC		; (Step 2)
-        	EXPORT  SysTick_Handler           [WEAK]
-		; Save registers
-			PUSH	{R4-R11, LR}
-		; Invoke _timer_update
-			LDR		R12, =_timer_update
-			BLX		R12
-		; Retrieve registers
-			POP	{R4-R11, LR}
-		; Change from MSP to PSP
-			MOV		R0, #0x2				; Move into temp register to activiate PSP | 0010
-			MRS		R1, CONTROL
-			ORR		R0, R0, R1				; Change to psp mode set bit 1 to 1 in the control register | 0000 00[]0 set that bit to 1 for psp mode
-			MSR		CONTROL, R0				; Control register - 0000 0010 
-		; Go back to the user program
-			BX		LR
+				EXPORT  SysTick_Handler           [WEAK]
+					
+				; Save registers
+				PUSH	{R4-R11, LR}
+				
+				; Invoke _timer_update
+				LDR		R12, =_timer_update
+				BLX		R12
+				
+				; Retrieve registers
+				POP	{R4-R11, LR}
+				
+				; Change from MSP to PSP
+				MOV		R0, #0x2				; Move into temp register to activiate PSP | 0010
+				MRS		R1, CONTROL
+				ORR		R0, R0, R1				; Change to psp mode set bit 1 to 1 in the control register | 0000 00[]0 set that bit to 1 for psp mode
+				MSR		CONTROL, R0				; Control register - 0000 0010
+				
+				; Go back to the user program
+				BX		LR
 				B       .
                 ENDP
 
