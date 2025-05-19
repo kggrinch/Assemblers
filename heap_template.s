@@ -19,7 +19,6 @@ INVALID		EQU		-1				; an invalid id
 ; Memory Control Block Initialization
 		EXPORT	_heap_init
 _heap_init
-	; Implement by yourself
 		; Zeroing the heap space: no need to implement in step 2's assembly code.
 		
 		; Initialize MCB
@@ -29,59 +28,52 @@ _heap_init
 									;Post increment by four to keep the addresses memory aligned in the loop. So the loop starts at .....4 memory
 									
 		LDR		R2, =MCB_BOT		; Condition
-		MOV		R3, #0				; Value to store in the rest of the MCB index
+		MOV		R3, #0				; Value to store in the rest of the MCB indexes
 		
 		; Traverse the heap memory through the mcb blocks
 		; Start at the top and and go to each index until we reach mcb bot
 _loop
-		CMP		R0, R2				; Current MCB Index >= MCB Bottom
+		CMP		R0, R2				; If Current MCB Index >= MCB Bottom Break
 		BGE		_break
-		
-		; This is incrementing the index of mcb mcb[i] by incrmenting by two memory addresses since each memory address holds two bytes
-		STR 	R3, [R0], #0x4		; store 0 into all the other MCB indexes to represnted unused space | MCB index i++
+									; 4 byte clearing is used to ensure all space is cleared upon initialization
+		STR 	R3, [R0], #0x4		; store 0 by 4 bytes into all the other MCB indexes to represnted unused space | MCB index i++
 		B		_loop
-			
-			
+				
 _break
-		
-		MOV		pc, lr
+		MOV		pc, lr				; Return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Kernel Memory Allocation
 ; void* _k_alloc( int size )
 		EXPORT	_kalloc
-_kalloc
-	; Implement by yourself
-		
-						
-		PUSH 	{R4-R11, LR}	; Save called in registers
+_kalloc				
+		PUSH 	{R4-R11, LR}	; Save Register
 		
 		; Intitialize the MCB
 		LDR		R1, =MCB_TOP	; [R1 = Left]
 		LDR		R2, =MCB_BOT	; [R2 = Right]
 		
 								
-		CMP		R0, #32			; Check if passed in size is valid. If not give it the minimum size
+		CMP		R0, #32			; Check if passed size is valid. If not give it the minimum size
 		BLT		_minimum_size
 		B		_recursive_branch
 		
 _minimum_size
-		MOV		R0, #32
+		MOV		R0, #32			; Size = 32 bytes
 		
 _recursive_branch	
-		BL		_ralloc
-		POP		{R4-R11, LR}			; Restore and return
-		MOV		PC, LR
+		BL		_ralloc			; Recursive call to ralloc(size)
+		
+		POP		{R4-R11, LR}	; Restore registers
+		MOV		PC, LR			; Return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recursive Malloc Memory Allocation Function
 ; void* _r_alloc(int size, int left, int right)
 _ralloc	
-		
-		PUSH 	{R4-R11, LR}			; Save register and link register
+		PUSH 	{R4-R11, LR}			; Save Registers
 		
 		; Setting up variables						
-
 		LDR		R9, =MCB_ENT_SZ			;[R3 = Entire] = right - left + mcb_ent_sz
 		SUBS	R3, R2, R1				;R3 = right - left
 		ADDS	R3, R3, R9	 			;R3 = (right - left) + mcb_ent_sz	
@@ -99,34 +91,34 @@ _ralloc
 		MUL		R8, R4, R9				;[R8 = Act_Half_Size] = Half * 16 | This might be incorrect due to LSL. Double check and if anything use the MUL instead of lsl
 		
 		
-										; Start of memory space search
+		; Start of memory space search
 		CMP		R0, R8
 		BGT		_else					; If size <= act_half_size go to _if
 		
-		; _if - recursive call left
-										
+		; Go Left - recursive call left	[_if]							
 		; heap_addr = _ralloc( size, left, midpoint - mcb_ent_sz );
-		MOV		R0, R0					; leave size unchanged
-		MOV		R1, R1					; leave left unchanged
+		MOV		R0, R0					; leave size unchanged | Could remove this add a comment mentioning that r0 is unchanged
+		MOV		R1, R1					; leave left unchanged | Could remove this add a comment mentioning that r` is unchanged
 		PUSH	{R2}					; Save original right
-		PUSH	{R0}
-		LDR		R9, =MCB_ENT_SZ
+		PUSH	{R0}					; Save original size
+		LDR		R9, =MCB_ENT_SZ			
 		SUBS	R2, R5, R9				; midpoint - mcb_ent_sz
-		BL		_ralloc	
+		BL		_ralloc					; Recurse
+		
 		MOV		R6, R0					; Store heap address to heap_add variable r6
 		POP		{R0}					; Retore original r0 argument (size)
 		POP		{R2}					; Restore original right)
-		CMP		R6, #0					; R0 contains the heap_addr | If R0 != null return, Otherwise go right | Original R0 is lost because we are holding the return ptr
+		CMP		R6, #0					; R6 contains the heap_addr | If R6 != null return, Otherwise go right
 		BNE		_split_parent
 		
-										; Go Right
+		; Go Right - recursive call right
 		; return _ralloc( size, midpoint, right);	
-		
-		MOV		R0, R0					; leave size unchanged
+		MOV		R0, R0					; leave size unchanged | Could remove this add a comment mentioning that r0 is unchanged
 		PUSH	{R1}					; save original left
 		PUSH	{R0}					; save original r0 size argument
 		MOV		R1, R5					; left = midpoint
-		MOV		R2, R2					; leave right unchanged
+		MOV		R2, R2					; leave right unchanged | Could remove this add a comment mentioning that r0 is unchanged
+		
 		BL		_ralloc
 		MOV		R6, R0					; Save returned heap address into heap_addr variable r6
 		POP		{R0}					; Restore original r0 size
@@ -134,84 +126,57 @@ _ralloc
 		CMP		R6, #0					; R6 contains the heap_addr | R6 != null then split parent and return heap_addr, Otherwise return null heap is full
 		BEQ		_ralloc_return			
 		
-		B		_split_parent			
+		B		_split_parent			; Branch to split parent
 		
 
 _else	; Try allocating entire space
-
-		; New
-		;PUSH	{R0}			; Save original r0
-		;BL		_m2a			; branch
-		;MOV		R9, R0			; move result into r9
-		;POP		{R0}			; restore original r0
-		;LDR		R10, [R9]		; access value at r9
-		;AND		R11, R10, #0x01
-
-
-
-		; Original
-		LDR 	R9, [R1]		; R9 = mcb[left]
-		AND		R10, R9, #0x01	; r9 was r2
+		LDRH 	R9, [R1]				; R9 = mcb[left] | Change from LDR to LDRH
+		AND		R10, R9, #0x01			; Check bit for avalability
 		CMP		R10, #0
-		BNE		_return_null	; If mcb[left] != 0 memory space used return null. Otherwise, we have an entire space
+		BNE		_return_null			; If mcb[left] != 0 memory space used return null. Otherwise, we have an entire space
 		
 		; We have an entire space
 		CMP		R9, R7			
-		BLT		_return_null	; If mcb[left] < act_entire_size cant fit return null. Otherwise, compute heap address
+		BLT		_return_null			; If mcb[left] < act_entire_size cant fit return null. Otherwise, compute heap address
 		
 		; Convert memory spot to occupied
-		ORR		R10, R7, #0x01	; change bit sign to indicate space is now used
-		STR		R10, [R1]		; insert changed bit into mcb block
+		ORR		R10, R7, #0x01			; change bit sign to indicate space is now used
+		STRH	R10, [R1]				; insert changed bit into mcb block | Changed from STR to STRH
 		
 		; Compute the corresponding heap address R0 = heap_top + ( left - mcb_top ) * 16 
-		; Might be computing the corresponding heap address incorrectly
 		LDR		R10, =HEAP_TOP
 		LDR		R11, =MCB_TOP
 		MOV		R12, #16
-		SUBS	R6, R1, R11			; R6(heap_address) = left - mcb_top
-		MUL		R6, R6, R12			; R6(heap_address) = (left - mcb_top) * 16
-		ADDS	R6, R6, R10			;  R6(heap_address) = ((left - mcb_top) * 16) + heap_top 
-		B		_ralloc_return
-
-
-_split_parent
-
-		; Adding new here
-		;MOV		R1, R5
-		;BL		_m2a
-		;LDR		R2, [R0]
-		;AND		R2, R2, #0x01
-		;CMP		R2, #0			; If MCB[midpoint] != 0 - parent already split _ralloc_return, Otherwise split the parent
-		;BNE		_ralloc_return
+		SUBS	R6, R1, R11				; R6(heap_address) = left - mcb_top
+		MUL		R6, R6, R12				; R6(heap_address) = (left - mcb_top) * 16
+		ADDS	R6, R6, R10				; R6(heap_address) = ((left - mcb_top) * 16) + heap_top 
 		
-		;MOV		R2, R7
-		;STR		R2, [R0]
-		;B		_ralloc_return	
-		
-		; Original
-		LDR		R9, [R5]		;Load data from midpoint
-		AND		R10, R9, #0x01		
-		CMP		R10, #0			; If MCB[midpoint] != 0 - parent already split _ralloc_return, Otherwise split the parent
+		B		_ralloc_return			; return
+
+_split_parent	;Parent memory must be split
+		LDRH	R9, [R5]				; Load data from midpoint | Changed from LDR to LDRH
+		AND		R10, R9, #0x01	
+		CMP		R10, #0					; If MCB[midpoint] != 0 - parent already split _ralloc_return, Otherwise split the parent
 		BNE		_ralloc_return
 		
-		;else
-		STR		R8, [R5]		; Store act_half_size into mcb[midpoint] | Was r9 but changed to r5 because we need to store the value into the mcb[midpoint]
-		B	_ralloc_return	
+		; Split the Parent (else)
+		STRH	R8, [R5]				; Store act_half_size into mcb[midpoint] | Changed from str to strh
+		B		_ralloc_return	
 	
 _return_null
-		MOV		R6, #0				; Set return register to null
+		MOV		R6, #0					; Set return register to null
 
 _ralloc_return
-		MOV		R0, R6				; Store the heap address into r0
-		POP     {R4-R11, LR}		; Restore registers
-		MOV		PC, LR				; Return
+		MOV		R0, R6					; Store the heap address into r0
+		POP     {R4-R11, LR}			; Restore registers
+		MOV		PC, LR					; Return
 		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Kernel Memory De-allocation
 ; void free( void *ptr )
 		EXPORT	_kfree
 _kfree
-		PUSH    {R1-R2, LR}            ; Save registers
+		PUSH    {R1-R2, LR}             ;Save registers
 		
 		CMP     R0, #0                  ; Check for NULL pointer
 		BEQ		_kfree_fail				; Return NULL if ptr is NULL
@@ -251,12 +216,12 @@ _rfree
         PUSH    {R4-R7, LR}             ; Save registers
 
         ; Load MCB contents
-        LDR    	R3, [R0]           		; R3 = mcb_contents | Changed from LDRH to LDR
+        LDRH    R3, [R0]           		; R3 = mcb_contents | Changed from LDRH to LDR UD
         LSRS    R4, R3, #4              ; R4 = mcb_chunk (size in units) | Might change to DIV
         LSLS    R4, R4, #4              ; R4 = my_size (clears used bit) | Might change to MUL
 
         ; Mark as free
-        STR    R4, [R0]                ; Clear used bit in MCB | Check if cleared correctly | Changed from STRH to STR
+        STRH    R4, [R0]                ; Clear used bit in MCB | Check if cleared correctly | Changed from STRH to STR UD
 
         ; Calculate mcb_offset and check left/right
         LDR     R1, =MCB_TOP
@@ -273,7 +238,7 @@ _rfree
         CMP     R6, R1                  ; Check if buddy is beyond MCB_BOT | Issue here Changed R2 with R1
         BHS     _rfree_done
 
-        LDR     R3, [R6]                ; R3 = buddy_contents | Changed from LDRH to LDR
+        LDRH     R3, [R6]                ; R3 = buddy_contents | Changed from LDRH to LDR UD
         TST     R3, #1                  ; Check buddy's used bit
         BNE     _rfree_done
 
@@ -285,9 +250,9 @@ _rfree
 
         ; Merge with buddy
         MOVS    R3, #0
-        STR    	R3, [R6]                ; Clear buddy | Changed from STRH to STR
+        STRH    	R3, [R6]            ; Clear buddy | Changed from STRH to STR UD
         LSLS    R4, R4, #1              ; Double size
-        STR    	R4, [R0]                ; Update current block | Changed from STRH to STR
+        STRH    	R4, [R0]            ; Update current block | Changed from STRH to STR UD
         BL      _rfree                  ; Recurse
         B       _rfree_exit
 
@@ -298,7 +263,7 @@ _rfree_right
         CMP     R6, R1                  ; Check if buddy is below MCB_TOP
         BLO     _rfree_done
 
-        LDR    	R3, [R6]                ; R3 = buddy_contents | Changed from LDRH to LDR
+        LDRH    R3, [R6]            	; R3 = buddy_contents | Changed from LDRH to LDR UD
         TST     R3, #1                  ; Check buddy's used bit
         BNE     _rfree_done
 
@@ -310,9 +275,9 @@ _rfree_right
 
         ; Merge with buddy
         MOVS    R3, #0
-        STR    	R3, [R0]                ; Clear current block | Changed from STRH to STR
+        STRH    R3, [R0]                ; Clear current block | Changed from STRH to STR UD
         LSLS    R4, R4, #1              ; Double size
-        STR    	R4, [R6]                ; Update buddy | Changed from STRH to STR
+        STRH    R4, [R6]                ; Update buddy | Changed from STRH to STR UD
         MOV     R0, R6                  ; Set buddy as new mcb_addr
         BL      _rfree                  ; Recurse
         B       _rfree_exit
