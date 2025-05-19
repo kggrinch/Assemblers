@@ -102,7 +102,7 @@ _update_done
 	    EXPORT	_signal_handler
 
 _signal_handler
-		; Only handle SIGALRM (14)
+		; Only handle SIGALRM
         CMP R0, #SIGALRM		; ADD more here | If R0 is the SIGALRM then we branch to antoher label add SIGALRM into the USR_HANDLER address and return the previous into r0
         BNE _signal_done
 

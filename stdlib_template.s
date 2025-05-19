@@ -103,7 +103,7 @@ _malloc
 		; set the system call # to R7
 		
 		; Artems Changes
-			MOV R7, #4			; From Table 3 SVC number for malloc
+			MOV R7, #4			; SVC number for malloc
 	        SVC     #0x0		; Invoke supervisor call
 			MOV		R0, R4
 			POP 	{R4-R11} 	; Restore original registers | may need to change
