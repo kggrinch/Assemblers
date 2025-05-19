@@ -281,7 +281,7 @@ SVC_Handler     PROC 		; (Step 2)
 				LDR		R12, =_syscall_table_jump	; Save _syscall_table_init address into register
 				BLX		R12							; Branch to _syscall_table_init in SVC.s
 				; Retrieve registers
-				POP		{R4-R11, LR}						; Save heap_addr in the stack
+				POP		{R4-R11, LR}				; Save heap_addr in the stack
 				MOV		R4, R0
 				; Go back to stdlib.s
 				BX		LR

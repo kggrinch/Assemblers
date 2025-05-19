@@ -198,11 +198,6 @@ _split_parent
 		STR		R8, [R5]		; Store act_half_size into mcb[midpoint] | Was r9 but changed to r5 because we need to store the value into the mcb[midpoint]
 		B	_ralloc_return	
 	
-	
-_m2a	; Might not need
-		
-	
-	
 _return_null
 		MOV		R6, #0				; Set return register to null
 
@@ -216,10 +211,12 @@ _ralloc_return
 ; void free( void *ptr )
 		EXPORT	_kfree
 _kfree
+		PUSH    {R1-R2, LR}            ; Save registers
+		
 		CMP     R0, #0                  ; Check for NULL pointer
-        BXEQ    LR                      ; Return NULL if ptr is NULL
+		BEQ		_kfree_fail				; Return NULL if ptr is NULL
 
-        PUSH    {R1-R2, LR}            ; Save registers
+        ;PUSH    {R1-R2, LR}            ; Save registers Need to delete since I am saving the registers above
         LDR     R1, =HEAP_TOP
         LDR     R2, =HEAP_BOT
         CMP     R0, R1                  ; Check if ptr < HEAP_TOP
@@ -254,29 +251,29 @@ _rfree
         PUSH    {R4-R7, LR}             ; Save registers
 
         ; Load MCB contents
-        LDRH    R3, [R0]                ; R3 = mcb_contents
-        LSRS    R4, R3, #4              ; R4 = mcb_chunk (size in units)
-        LSLS    R4, R4, #4              ; R4 = my_size (clears used bit)
+        LDR    	R3, [R0]           		; R3 = mcb_contents | Changed from LDRH to LDR
+        LSRS    R4, R3, #4              ; R4 = mcb_chunk (size in units) | Might change to DIV
+        LSLS    R4, R4, #4              ; R4 = my_size (clears used bit) | Might change to MUL
 
         ; Mark as free
-        STRH    R4, [R0]                ; Clear used bit in MCB
+        STR    R4, [R0]                ; Clear used bit in MCB | Check if cleared correctly | Changed from STRH to STR
 
         ; Calculate mcb_offset and check left/right
         LDR     R1, =MCB_TOP
         SUBS    R5, R0, R1              ; R5 = mcb_offset
         LSRS    R6, R4, #4              ; R6 = mcb_chunk (size in units)
         UDIV    R7, R5, R6              ; R7 = mcb_offset / mcb_chunk
-        ANDS    R7, R7, #1              ; R7 % 2
+        AND    	R7, R7, #1              ; R7 % 2
         CMP     R7, #0
         BNE     _rfree_right
 
         ; Left block case
         ADDS    R6, R0, R6              ; R6 = buddy_addr (mcb_addr + mcb_chunk)
         LDR     R1, =MCB_BOT
-        CMP     R6, R2                  ; Check if buddy is beyond MCB_BOT
+        CMP     R6, R1                  ; Check if buddy is beyond MCB_BOT | Issue here Changed R2 with R1
         BHS     _rfree_done
 
-        LDRH    R3, [R6]                ; R3 = buddy_contents
+        LDR     R3, [R6]                ; R3 = buddy_contents | Changed from LDRH to LDR
         TST     R3, #1                  ; Check buddy's used bit
         BNE     _rfree_done
 
@@ -288,20 +285,20 @@ _rfree
 
         ; Merge with buddy
         MOVS    R3, #0
-        STRH    R3, [R6]                ; Clear buddy
+        STR    	R3, [R6]                ; Clear buddy | Changed from STRH to STR
         LSLS    R4, R4, #1              ; Double size
-        STRH    R4, [R0]                ; Update current block
+        STR    	R4, [R0]                ; Update current block | Changed from STRH to STR
         BL      _rfree                  ; Recurse
         B       _rfree_exit
 
 _rfree_right
         ; Right block case
         LDR     R1, =MCB_TOP
-        SUBS    R6, R0, R4              ; R6 = buddy_addr (mcb_addr - chunk_size_in_bytes)
+        SUBS    R6, R0, R6              ; R6 = buddy_addr (mcb_addr - mcb_chunk) | Issue here incorrect buddy address | Change R4 to R6 when subtracting from
         CMP     R6, R1                  ; Check if buddy is below MCB_TOP
         BLO     _rfree_done
 
-        LDRH    R3, [R6]                ; R3 = buddy_contents
+        LDR    	R3, [R6]                ; R3 = buddy_contents | Changed from LDRH to LDR
         TST     R3, #1                  ; Check buddy's used bit
         BNE     _rfree_done
 
@@ -313,9 +310,9 @@ _rfree_right
 
         ; Merge with buddy
         MOVS    R3, #0
-        STRH    R3, [R0]                ; Clear current block
+        STR    	R3, [R0]                ; Clear current block | Changed from STRH to STR
         LSLS    R4, R4, #1              ; Double size
-        STRH    R4, [R6]                ; Update buddy
+        STR    	R4, [R6]                ; Update buddy | Changed from STRH to STR
         MOV     R0, R6                  ; Set buddy as new mcb_addr
         BL      _rfree                  ; Recurse
         B       _rfree_exit
@@ -324,6 +321,7 @@ _rfree_done
         ; Return mcb_addr (success)
         MOV     R0, R0                  ; R0 still holds mcb_addr
 _rfree_exit
-        POP     {R4-R7, PC}             ; Restore registers and return
+        POP     {R4-R7, LR}             ; Restore registers and return
+		BX		LR
 
 		END

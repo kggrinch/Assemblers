@@ -11,7 +11,7 @@ STCTRL_STOP	EQU		0x00000004		; Bit 2 (CLK_SRC) = 1, Bit 1 (INT_EN) = 0, Bit 0 (E
 STCTRL_GO	EQU		0x00000007		; Bit 2 (CLK_SRC) = 1, Bit 1 (INT_EN) = 1, Bit 0 (ENABLE) = 1
 STRELOAD_MX	EQU		0x00FFFFFF		; MAX Value = 1/16MHz * 16M = 1 second
 STCURR_CLR	EQU		0x00000000		; Clear STCURRENT and STCTRL.COUNT	
-SIGALRM		EQU		14			; sig alarm
+SIGALRM		EQU		14				; sig alarm
 
 ; System Variables
 SECOND_LEFT	EQU		0x20007B80		; Secounds left for alarm( )
@@ -46,7 +46,7 @@ _timer_init
 _timer_start
 		; Save previous value
         LDR R1, =SECOND_LEFT
-        LDR R2, [R1]        ; Previous value -> R2 (return value)
+        LDR R2, [R1]        ; R2 = Previous value [SECOND_LEFT = 0x20007B80]
         STR R0, [R1]        ; Store new seconds
 
         ; Start timer
@@ -103,15 +103,17 @@ _update_done
 
 _signal_handler
 		; Only handle SIGALRM (14)
-        CMP R0, #SIGALRM
+        CMP R0, #SIGALRM		; ADD more here | If R0 is the SIGALRM then we branch to antoher label add SIGALRM into the USR_HANDLER address and return the previous into r0
         BNE _signal_done
 
         ; Swap handler
-        LDR R2, =USR_HANDLER
-        LDR R0, [R2]        ; Return old handler
-        STR R1, [R2]        ; Store new handler
+        LDR R3, =USR_HANDLER
+        LDR R2, [R3]        ; Return old handler
+        STR R1, [R3]        ; Store new handler
+
 
 _signal_done
-        BX LR
+		MOV	R0, R2			; R0 = return prevous user handler
+        BX LR				; return
 		
 		END

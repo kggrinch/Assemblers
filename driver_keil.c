@@ -45,16 +45,20 @@ int main( ) {
 	*alarmed = 1;
 	_signal( SIG_ALRM, sig_handler1 );
 	_alarm( 2 );
-//	while ( *alarmed != 2 ) {
-//		void* mem9 = _malloc( 4 );	
-//		_free( mem9 );		
-//	}
+	while ( *alarmed != 2 ) {
+		void* mem9 = _malloc( 4 );	
+		_free( mem9 );		
+		}
 	
 	_signal( SIG_ALRM, sig_handler2 );
 	_alarm( 3 );
-//	while ( *alarmed != 3 ) {
-//		void* mem9 = _malloc( 4 );	
-//		_free( mem9 );
-//	}
+	while ( *alarmed != 3 ) {
+		void* mem9 = _malloc( 4 );	
+		_free( mem9 );
+	}
+	
+	_free(alarmed); // Added this to free alarmed dynamic allocated memory
+	
+	
 	return 0;
 }

@@ -128,8 +128,9 @@ _free
 		; Artems Changes
 			MOV R7, #5		; SVC number for free
         	SVC     #0x0
-			POP {R4-R11} 	;may need to change
-			BX LR			; Just return					
+			MOV		R0, R4
+			POP 	{R4-R11} 	; Restore original registers | may need to change
+			BX LR				; Return					
 		; Artems Changes	
 			
 		; resume registers
@@ -177,7 +178,7 @@ _signal
 		; Artems Changes
 			MOV R7, #2		; SVC number for signal
         	SVC     #0x0
-			MOV R0, R1		; Return handler (per spec page 10)
+			MOV R0, R4		; Return handler 
 			POP {R4-R11} 	;may need to change
 			BX LR								
 		; Artems Changes	
