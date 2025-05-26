@@ -25,7 +25,6 @@ _heap_init
 		LDR		R0, =MCB_TOP			;R0 = mcb[0] - root | r0 will represent the index of mcb so i
 		LDR		R1, =MAX_SIZE			;R1 = max bytes in heap
 		
-		;STR		R1, [R0], #0x4
 		STRH	R1, [R0], #0x2			;Set max bytes into root to indicate memory avaliable 
 										;Post increment by two to keep the addresses memory aligned in the loop. So the loop starts at ...2 memory
 									
@@ -38,8 +37,7 @@ _loop
 		CMP		R0, R2					; If Current MCB Index >= MCB Bottom Break
 		BGE		_break
 										; 2 byte clearing is used to ensure all space is cleared upon initialization
-		;STR 	R3, [R0], #0x4			; store 0 by 2 bytes into all the other MCB indexes to represnted unused space | MCB index i++
-		STRH	R3, [R0], #0x2
+		STRH	R3, [R0], #0x2			; store 0 by 2 bytes into all the other MCB indexes to represnted unused space | MCB index i++
 
 		B		_loop
 				
