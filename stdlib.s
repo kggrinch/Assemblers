@@ -98,13 +98,14 @@ _malloc
 		PUSH 	{R4-R11} 
 		
 		; set the system call # to R7
-		MOV 	R7, #4		; From Table 4 SVC number for malloc
-	    SVC     #0x0		; Invoke supervisor call
-		
-		MOV		R0, R4		; Save return value into R0
-		POP 	{R4-R11} 	; Restore original registers
+		MOV 	R7, #4			; From Table 4 SVC number for malloc
+	    SVC     #0x0			; Invoke supervisor call
+			
+		MOV		R0, R4			; Save return value into R0
+		POP 	{R4-R11} 		; Restore original registers
 		
 		BX 		LR			; Return
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; void _free( void* addr )
@@ -118,7 +119,7 @@ _free
 		PUSH 	{R4-R11} 
 		
 		; set the system call # to R7
-		MOV 	R7, #5			; From Table 4 SVC number for malloc
+		MOV 	R7, #5			; From Table 5 SVC number for malloc
         SVC     #0x0
 		
 		MOV		R0, R4			; Save return value into R0
@@ -141,13 +142,13 @@ _alarm
 		PUSH 	{R4-R11} ;may need to change
 		
 		; set the system call # to R7
-		MOV 	R7, #1		; SVC number for alarm
+		MOV 	R7, #1			; From table 1 SVC number for alarm
         SVC     #0x0	
 		
-		MOV 	R0, R4		; Set R0 with return value of either 0 or previous scheduled alarm due to be delievered
-		POP 	{R4-R11} 	; Restore original registers
+		MOV 	R0, R4			; Set R0 with return value of either 0 or previous scheduled alarm due to be delievered
+		POP 	{R4-R11} 		; Restore original registers
 		
-		BX 		LR			; Return			
+		BX 		LR				; Return			
 		
 			
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -164,13 +165,13 @@ _signal
 		PUSH {R4-R11} ;may need to change
 		
 		; set the system call # to R7
-		MOV R7, #2		; SVC number for signal
+		MOV R7, #2				; From table 2 SVC number for signal
         SVC     #0x0
 		
-		MOV R0, R4		; Set R0 with return value of previous handler
-		POP {R4-R11} 	; Restore original registers
+		MOV R0, R4				; Set R0 with return value of previous handler
+		POP {R4-R11} 			; Restore original registers
 		
-		BX LR			; Return						
+		BX LR					; Return						
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		END			
