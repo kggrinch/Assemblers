@@ -215,8 +215,8 @@ Reset_Handler   PROC
 				IMPORT  _syscall_table_jump
 	
 				; Store __initial_sp into MSP (Step 1 toward Midpoint Report)
-				LDR		R0, =__initial_sp 			; save intial stack to temp register | A
-				MSR 	MSP, R0 					; load intial stack from temp register to MSP special register | A
+				LDR		R0, =__initial_sp 			; save intial stack to temp register
+				MSR 	MSP, R0 					; load intial stack from temp register to MSP special register 
 
 				ISB     ; Let's leave as is from the original.
 				
@@ -226,7 +226,7 @@ Reset_Handler   PROC
 				; Initialize the system call table (Step 2)
 				LDR 	R0, =_syscall_table_init
 				BLX 	R0
-				; Initialize the heap space (Step 2) - todo
+				; Initialize the heap space (Step 2)
 				LDR		R0, =_timer_init
 				BLX		R0
 				
@@ -237,7 +237,7 @@ Reset_Handler   PROC
 				; Store __initial_user_sp into PSP (Step 1 toward Midpoint Report)
 				LDR		R0, =__initial_user_sp 		; save intial user stack to temp register
 				MSR 	PSP, R0						; load intial user stack from temp register to special PSP register
-				; Change CPU mode into unprivileged thread mode using PSP | A
+				; Change CPU mode into unprivileged thread mode using PSP
 				MOV		R0, #0x3					; Move into temp register to activiate unprivliged bits
 				MRS		R1, CONTROL
 				ORR		R0, R0, R1

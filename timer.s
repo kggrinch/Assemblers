@@ -103,17 +103,17 @@ _update_done
 
 _signal_handler
 		; Only handle SIGALRM
-        CMP R0, #SIGALRM		; ADD more here | If R0 is the SIGALRM then we branch to antoher label add SIGALRM into the USR_HANDLER address and return the previous into r0
+        CMP R0, #SIGALRM		; If R0 is the SIGALRM then we branch to another label add SIGALRM into the USR_HANDLER address and return the previous into r0
         BNE _signal_done
 
         ; Swap handler
         LDR R3, =USR_HANDLER
-        LDR R2, [R3]        ; Return old handler
-        STR R1, [R3]        ; Store new handler
+        LDR R2, [R3]        	; Return old handler
+        STR R1, [R3]        	; Store new handler
 
 
 _signal_done
-		MOV	R0, R2			; R0 = return prevous user handler
-        BX LR				; return
+		MOV	R0, R2				; R0 = return prevous user handler
+        BX LR					; return
 		
 		END

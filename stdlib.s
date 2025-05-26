@@ -101,18 +101,8 @@ _malloc
 		MOV 	R7, #4		; From Table 4 SVC number for malloc
 	    SVC     #0x0		; Invoke supervisor call
 		
-<<<<<<< HEAD
-		; Artems Changes
-			MOV R7, #4			; SVC number for malloc
-	        SVC     #0x0		; Invoke supervisor call
-			MOV		R0, R4
-			POP 	{R4-R11} 	; Restore original registers | may need to change
-			BX LR
-		; Artems Changes	
-=======
 		MOV		R0, R4		; Save return value into R0
 		POP 	{R4-R11} 	; Restore original registers
->>>>>>> 1f329d43db74eaaa4ab7407c44a347db8d59b17c
 		
 		BX 		LR			; Return
 
@@ -132,7 +122,7 @@ _free
         SVC     #0x0
 		
 		MOV		R0, R4			; Save return value into R0
-		POP 	{R4-R11} 		; Restore original registers | may need to change
+		POP 	{R4-R11} 		; Restore original registers
 		
 		BX 		LR				; Return					
 		

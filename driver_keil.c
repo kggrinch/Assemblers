@@ -24,7 +24,7 @@ int main( ) {
 	_bzero( stringB, 40 );
 	_strncpy( stringB, stringA, 40 );
 	_bzero( stringA, 40 );
-	void* mem1 = _malloc( 1024 ); // Argument passed in bytes. 1024 bytes - 1 kilobyte
+	void* mem1 = _malloc( 1024 );
 	void* mem2 = _malloc( 1024 );	
 	void* mem3 = _malloc( 8192 );	
 	void* mem4 = _malloc( 4096 );
