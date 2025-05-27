@@ -54,7 +54,7 @@ _timer_start
         LDR 	R0, =STCTRL_GO      ; Config: Enable timer + interrupt
         STR 	R0, [R1]            ; Start counting
 
-        ; Reset current counter (safeguard against residual values)
+        ; Reset current counter 
         LDR 	R0, =STCURRENT		; Load current value register
         MOV 	R1, #0				; Clear value
         STR 	R1, [R0]			; Write to current value register
