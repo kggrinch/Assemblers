@@ -25,8 +25,9 @@ DebugConfig/
 build/
 
 # User-specific GUI files
-*.uvguix.*
 *.uvoptx.bak
+*.uvoptx
+*.uvguix.*
 
 # Temporary/lock files
 ~$*
