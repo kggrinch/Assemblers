@@ -10,3 +10,25 @@ environment, emulating in the ARM Cortex microcontroller on the Texas Instrucmen
 * Windows OS 7 or higher (32-bit or 64-bit).
 
 ## Installation/Running Services
+
+** Installation
+1. Install Keil using the following link: https://www.keil.com/download/
+
+   a. Choose "Product Downloads" and "MDK-ARM", and submit a request to download MDK536.EXE
+   
+   b. After installation, install the TM4C pack from Pack Installer app.
+
+3. Download repositry zip and open ARM_Final Keil driver file
+   
+   a. Download repositry zip
+   
+   b. Extract all
+   
+   c. Navigate and open ARM_Final Keil driver file (master->src->ARM_Final)
+
+5. Inside Keil, before starting a debugging simulation turn on the debug simulator
+   
+   a. Right click Target_1 and choose "Options for Target"
+   
+   b. In the menu click the "Debug" menu and "Use Simulator" checkbox
+   
